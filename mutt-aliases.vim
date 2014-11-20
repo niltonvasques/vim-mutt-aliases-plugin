@@ -2,11 +2,20 @@ function! FindMuttAliasesFile()
     let file = readfile(expand('~/.muttrc'))
     for line in file
         let words = split(line, '\s')
-        if len(words) >= 3 && words[0] == "set" && words[1] == "alias_file"
-            return words[2]
+	let divw  = split(line, '=')
+        if len(words) >= 3 && words[0] == "set" && len(divw) >= 2 && CleanWord(words[1]) == "alias_file"
+            return Strip(divw[1])
         endif
     endfor
     return ""
+endfunction
+
+function! Strip(input_string)
+    return substitute(a:input_string, '^\s*\(.\{-}\)\s*$', '\1', '')
+endfunction
+
+function! CleanWord(word)
+	return substitute(Strip(a:word), "=", "", "")
 endfunction
 
 function! CompleteMuttAliases(findstart, base)
@@ -20,21 +29,24 @@ function! CompleteMuttAliases(findstart, base)
         endwhile
         return start
     else
-        " find aliases matching with "a:base"
+       " find aliases matching with "a:base"
         let result = []
         let file = FindMuttAliasesFile()
+
         if file == ""
             return result
         endif
         if file[0] == '"'
-            let expanded_file = expand(file[1:-2])
+		let file = expand(file[1:-2])
+	else
+		let file = expand(file)
         endif
-        for line_alias in readfile(expanded_file)
+        for line_alias in readfile(file)
             let words = split(line_alias, '\s')
-            if words[0] == "alias" && len(words) >= 3
+            if len(words) >= 3 && words[0] == "alias"  
                 if words[1] =~ '^' . a:base
                     " get the alias part
-                    " mutt uses '\' to escape '"', we need to remove it!
+                   " mutt uses '\' to escape '"', we need to remove it!
                     let alias = substitute(join(words[2:-1], ' '), '\\', '', 'g')
                     let dict = {}
                     let dict['word'] = alias
